@@ -2,6 +2,11 @@ const socket = io()
 
 const statusEl = document.getElementById("b")
 const videoEl = document.getElementById("e")
+const uploadSection = document.getElementById("upload-section")
+const videoUpload = document.getElementById("video-upload")
+
+let currentRole = null
+let currentRoomId = null
 
 const createRoom = () => {
     socket.emit("create-room")
@@ -15,23 +20,152 @@ const joinRoom = () => {
 window.createRoom = createRoom
 window.joinRoom = joinRoom
 
-socket.on("room-created", (data) => {
-    statusEl.innerText = "Room ID: " + data.roomId + " (You are Host)"
-    console.log("Role:", data.role)
-})
+// ========== VIDEO UPLOAD (HOST ONLY) ==========
 
-socket.on("room-joined", (data) => {
-    statusEl.innerText = "Joined Room: " + data.roomId + " (Viewer)"
-    console.log("Role:", data.role)
-    videoEl.controls = false
-})
+videoUpload.addEventListener("change", async (e) => {
+    const file = e.target.files[0]
+    if (file && currentRole === "host") {
+        // Check file size (500MB limit)
+        if (file.size > 500 * 1024 * 1024) {
+            alert("Video file is too large! Maximum size is 500MB.")
+            videoUpload.value = "" // Reset input
+            return
+        }
 
-socket.on("role", (role) => {
-    console.log("Role:", role)
-    if (role === "viewer") {
-        videoEl.controls = false
+        statusEl.innerText = "Uploading video... Please wait."
+
+        const formData = new FormData()
+        formData.append("video", file)
+        formData.append("roomId", currentRoomId)
+
+        try {
+            const response = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+
+            const data = await response.json()
+
+            if (data.success) {
+                // Host also loads the video
+                videoEl.src = data.url
+                statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host) - Video uploaded!"
+                console.log("[HOST] Video uploaded successfully:", data.url)
+            } else {
+                alert("Upload failed: " + (data.error || "Unknown error"))
+                statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host)"
+            }
+        } catch (error) {
+            console.error("[HOST] Upload failed:", error)
+            alert("Failed to upload video. Please try again.")
+            statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host)"
+        }
+
+        videoUpload.value = "" // Reset input for next upload
     }
 })
+
+// ========== ROOM EVENTS ==========
+
+// HOST CREATED ROOM
+socket.on("room-created", (data) => {
+    statusEl.innerText = "Room ID: " + data.roomId + " (You are Host)"
+    currentRole = "host"
+    currentRoomId = data.roomId
+    uploadSection.style.display = "block" // Show upload for host
+    console.log("Role:", currentRole)
+})
+
+// VIEWER JOINED ROOM
+socket.on("room-joined", (data) => {
+    statusEl.innerText = "Joined Room: " + data.roomId + " (Viewer)"
+    currentRole = "viewer"
+    currentRoomId = data.roomId
+    videoEl.controls = false
+    console.log("Role:", currentRole)
+
+    // SYNC STATE ON JOIN (late joiner sync)
+    if (data.videoState.url) {
+        videoEl.src = data.videoState.url
+        videoEl.currentTime = data.videoState.currentTime
+        if (data.videoState.isPlaying) {
+            videoEl.play()
+        }
+    }
+})
+
+// ========== HOST VIDEO CONTROLS (EMIT EVENTS) ==========
+
+// HOST PLAY
+videoEl.addEventListener("play", () => {
+    if (currentRole === "host") {
+        socket.emit("play", {
+            roomId: currentRoomId,
+            currentTime: videoEl.currentTime
+        })
+        console.log("[HOST] Play at:", videoEl.currentTime)
+    }
+})
+
+// HOST PAUSE
+videoEl.addEventListener("pause", () => {
+    if (currentRole === "host") {
+        socket.emit("pause", {
+            roomId: currentRoomId,
+            currentTime: videoEl.currentTime
+        })
+        console.log("[HOST] Pause at:", videoEl.currentTime)
+    }
+})
+
+// HOST SEEK
+videoEl.addEventListener("seeked", () => {
+    if (currentRole === "host") {
+        socket.emit("seek", {
+            roomId: currentRoomId,
+            currentTime: videoEl.currentTime
+        })
+        console.log("[HOST] Seek to:", videoEl.currentTime)
+    }
+})
+
+// ========== VIEWER VIDEO SYNC (RECEIVE EVENTS) ==========
+
+// VIEWER RECEIVE PLAY
+socket.on("play", (data) => {
+    if (currentRole === "viewer") {
+        videoEl.currentTime = data.currentTime
+        videoEl.play()
+        console.log("[VIEWER] Synced play at:", data.currentTime)
+    }
+})
+
+// VIEWER RECEIVE PAUSE
+socket.on("pause", (data) => {
+    if (currentRole === "viewer") {
+        videoEl.currentTime = data.currentTime
+        videoEl.pause()
+        console.log("[VIEWER] Synced pause at:", data.currentTime)
+    }
+})
+
+// VIEWER RECEIVE SEEK
+socket.on("seek", (data) => {
+    if (currentRole === "viewer") {
+        videoEl.currentTime = data.currentTime
+        console.log("[VIEWER] Synced seek to:", data.currentTime)
+    }
+})
+
+// VIEWER RECEIVE VIDEO CHANGE
+socket.on("changeVideo", (data) => {
+    // Both host and viewers load the new video
+    videoEl.src = data.url
+    videoEl.currentTime = 0
+    console.log("[VIDEO CHANGED] New video loaded:", data.url)
+})
+
+// ========== ERROR HANDLING ==========
 
 socket.on("error-msg", (msg) => {
     alert(msg)

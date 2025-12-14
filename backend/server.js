@@ -2,6 +2,8 @@ const express = require("express")
 const http = require("http")
 const { Server } = require("socket.io")
 const path = require("path")
+const multer = require("multer")
+const fs = require("fs")
 
 const app = express()
 const server = http.createServer(app)
@@ -10,12 +12,78 @@ const io = new Server(server)
 // Store room metadata with host-first architecture
 const rooms = new Map()
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, "../uploads")
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir)
+}
+
+// Configure multer for video uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir)
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = Date.now() + "-" + file.originalname
+        cb(null, uniqueName)
+    }
+})
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit (increased)
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith("video/")) {
+            cb(null, true)
+        } else {
+            cb(new Error("Only video files allowed"))
+        }
+    }
+})
+
 app.use(express.static(path.join(__dirname, "../public")))
+app.use("/uploads", express.static(uploadsDir)) // Serve uploaded videos
 
 // Generate unique room ID
 const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 8)
 }
+
+// ========== VIDEO UPLOAD ENDPOINT ==========
+app.post("/upload", (req, res) => {
+    upload.single("video")(req, res, (err) => {
+        if (err) {
+            if (err.code === "LIMIT_FILE_SIZE") {
+                return res.status(400).json({ error: "File too large. Maximum size is 500MB" })
+            }
+            return res.status(400).json({ error: err.message || "Upload failed" })
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: "No video file uploaded" })
+        }
+
+        const videoUrl = `/uploads/${req.file.filename}`
+        const roomId = req.body.roomId
+
+        console.log(`[VIDEO UPLOADED] Room: ${roomId} | File: ${req.file.filename}`)
+
+        // Broadcast video URL to all users in the room
+        if (roomId) {
+            const room = rooms.get(roomId)
+            if (room) {
+                room.videoState.url = videoUrl
+                room.videoState.currentTime = 0
+                room.videoState.isPlaying = false
+
+                // Notify all users in the room (including host)
+                io.to(roomId).emit("changeVideo", { url: videoUrl })
+            }
+        }
+
+        res.json({ success: true, url: videoUrl })
+    })
+})
 
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id)
