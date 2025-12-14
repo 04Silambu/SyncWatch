@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>SyncWatch</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<h2>SyncWatch – Phase 1</h2>
-<p>Open this page in two tabs</p>
+    <h2>SyncWatch – Phase 2</h2>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
+    <button onclick="a()">Create Room</button>
+
+    <p id="b"></p>
+
+    <input id="c" placeholder="Enter Room ID">
+    <button onclick="d()">Join Room</button>
+
+    <video id="e" controls width="400"></video>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
 </body>
+
 </html>
