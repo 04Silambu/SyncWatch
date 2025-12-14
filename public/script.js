@@ -1,32 +1,38 @@
-const a = io()
+const socket = io()
 
-const b = document.getElementById("b")
-const c = document.getElementById("e")
+const statusEl = document.getElementById("b")
+const videoEl = document.getElementById("e")
 
-const aCreate = () => {
-    a.emit("create-room")
+const createRoom = () => {
+    socket.emit("create-room")
 }
 
-const d = () => {
-    const e = document.getElementById("c").value
-    a.emit("join-room", e)
+const joinRoom = () => {
+    const roomId = document.getElementById("c").value
+    socket.emit("join-room", roomId)
 }
 
-window.a = aCreate
-window.d = d
+window.createRoom = createRoom
+window.joinRoom = joinRoom
 
-a.on("room-created", (f) => {
-    b.innerText = "Room ID: " + f.roomId + " (You are Host)"
-    console.log("Role:", f.role)
+socket.on("room-created", (data) => {
+    statusEl.innerText = "Room ID: " + data.roomId + " (You are Host)"
+    console.log("Role:", data.role)
 })
 
-a.on("role", (f) => {
-    console.log("Role:", f)
-    if (f === "viewer") {
-        c.controls = false
+socket.on("room-joined", (data) => {
+    statusEl.innerText = "Joined Room: " + data.roomId + " (Viewer)"
+    console.log("Role:", data.role)
+    videoEl.controls = false
+})
+
+socket.on("role", (role) => {
+    console.log("Role:", role)
+    if (role === "viewer") {
+        videoEl.controls = false
     }
 })
 
-a.on("error-msg", (f) => {
-    alert(f)
+socket.on("error-msg", (msg) => {
+    alert(msg)
 })
