@@ -41,6 +41,9 @@ videoUpload.addEventListener("change", async (e) => {
         try {
             const response = await fetch("/upload", {
                 method: "POST",
+                headers: {
+                    "x-socket-id": socket.id  // 🔒 For host verification
+                },
                 body: formData
             })
 

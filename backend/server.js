@@ -63,23 +63,30 @@ app.post("/upload", (req, res) => {
             return res.status(400).json({ error: "No video file uploaded" })
         }
 
-        const videoUrl = `/uploads/${req.file.filename}`
         const roomId = req.body.roomId
+        const socketId = req.headers["x-socket-id"]
+        const room = rooms.get(roomId)
+
+        if (!room) {
+            return res.status(400).json({ error: "Invalid room" })
+        }
+
+        // 🔒 HOST-ONLY CHECK (Security)
+        if (room.hostId !== socketId) {
+            return res.status(403).json({ error: "Only host can upload video" })
+        }
+
+        const videoUrl = `/uploads/${req.file.filename}`
 
         console.log(`[VIDEO UPLOADED] Room: ${roomId} | File: ${req.file.filename}`)
 
-        // Broadcast video URL to all users in the room
-        if (roomId) {
-            const room = rooms.get(roomId)
-            if (room) {
-                room.videoState.url = videoUrl
-                room.videoState.currentTime = 0
-                room.videoState.isPlaying = false
+        // Update room video state
+        room.videoState.url = videoUrl
+        room.videoState.currentTime = 0
+        room.videoState.isPlaying = false
 
-                // Notify all users in the room (including host)
-                io.to(roomId).emit("changeVideo", { url: videoUrl })
-            }
-        }
+        // Notify all users in the room (including host)
+        io.to(roomId).emit("changeVideo", { url: videoUrl })
 
         res.json({ success: true, url: videoUrl })
     })
