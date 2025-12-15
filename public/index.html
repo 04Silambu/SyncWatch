@@ -17,7 +17,16 @@
     <input id="c" placeholder="Enter Room ID">
     <button onclick="joinRoom()">Join Room</button>
 
+    <!-- Room Control Buttons -->
+    <div id="room-controls" style="display: none; margin: 20px 0;">
+        <button id="delete-room-btn" onclick="deleteRoom()" style="background: red; color: white; display: none;">Delete
+            Room</button>
+        <button id="exit-room-btn" onclick="exitRoom()" style="background: orange; color: white; display: none;">Exit
+            Room</button>
+    </div>
+
     <div id="upload-section" style="display: none; margin: 20px 0;">
+
         <label for="video-upload">Upload Video (Host Only):</label>
         <input type="file" id="video-upload" accept="video/*">
     </div>

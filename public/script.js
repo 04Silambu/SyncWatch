@@ -22,6 +22,25 @@ const joinRoom = () => {
 window.createRoom = createRoom
 window.joinRoom = joinRoom
 
+// ========== ROOM CONTROL FUNCTIONS ==========
+const deleteRoom = () => {
+    if (currentRole === "host" && currentRoomId) {
+        if (confirm("Are you sure you want to delete this room?")) {
+            socket.emit("delete-room", { roomId: currentRoomId })
+        }
+    }
+}
+
+const exitRoom = () => {
+    if (currentRole === "viewer" && currentRoomId) {
+        socket.emit("leave-room", { roomId: currentRoomId })
+        location.reload() // Refresh page after exiting
+    }
+}
+
+window.deleteRoom = deleteRoom
+window.exitRoom = exitRoom
+
 // ========== VIDEO UPLOAD (HOST ONLY) ==========
 
 videoUpload.addEventListener("change", async (e) => {
@@ -83,6 +102,10 @@ socket.on("room-created", (data) => {
     document.getElementById("c").disabled = true
     document.querySelector("button[onclick='joinRoom()']").disabled = true
 
+    // Show delete room button for host
+    document.getElementById("room-controls").style.display = "block"
+    document.getElementById("delete-room-btn").style.display = "inline-block"
+
     console.log("Role:", currentRole)
 })
 
@@ -92,6 +115,11 @@ socket.on("room-joined", (data) => {
     currentRole = "viewer"
     currentRoomId = data.roomId
     videoEl.controls = false
+
+    // Show exit room button for viewer
+    document.getElementById("room-controls").style.display = "block"
+    document.getElementById("exit-room-btn").style.display = "inline-block"
+
     console.log("Role:", currentRole)
 
     // SYNC STATE ON JOIN (late joiner sync)
@@ -181,11 +209,19 @@ socket.on("error-msg", (msg) => {
     alert(msg)
 })
 
+// Room closed event
+socket.on("room-closed", (data) => {
+    alert(data.message)
+    location.reload() // Refresh page
+})
+
 // ========== WATCH HISTORY ==========
 
 const loadHistory = async () => {
+    console.log("📥 Fetching history...")
     const res = await fetch("/history")
     const data = await res.json()
+    console.log("📊 History data received:", data)
 
     const body = document.getElementById("history-body")
     body.innerHTML = ""
@@ -202,6 +238,7 @@ const loadHistory = async () => {
 
         body.appendChild(row)
     })
+    console.log("✅ Rendered", data.length, "history entries")
 }
 
 const deleteHistory = async (id) => {

@@ -274,7 +274,44 @@ io.on("connection", (socket) => {
         console.log(`[CHAT] ${roomId} | ${role}: ${message}`)
     })
 
+    // ========== ROOM CONTROL ==========
+    // Delete room (HOST only)
+    socket.on("delete-room", ({ roomId }) => {
+        const room = rooms.get(roomId)
+
+        if (!room) return
+
+        // Verify host authority
+        if (room && room.hostId === socket.id) {
+            // Notify all users that room is being deleted
+            io.to(roomId).emit("room-closed", { message: "Room has been deleted by host" })
+
+            // Delete the room
+            rooms.delete(roomId)
+            console.log(`[ROOM DELETED] ${roomId} | Deleted by host`)
+        }
+    })
+
+    // Leave room (VIEWER only)
+    socket.on("leave-room", ({ roomId }) => {
+        const room = rooms.get(roomId)
+
+        if (!room) return
+
+        // Remove viewer from room
+        room.members = room.members.filter(id => id !== socket.id)
+
+        // Leave socket room
+        socket.leave(roomId)
+
+        // Notify others
+        socket.to(roomId).emit("user-left", { userId: socket.id })
+
+        console.log(`[VIEWER LEFT] ${roomId} | Viewer: ${socket.id} | Remaining: ${room.members.length}`)
+    })
+
     // ========== END SESSION (OPTIONAL) ==========
+
     socket.on("end-session", ({ roomId }) => {
         const room = rooms.get(roomId)
         if (room && room.hostId === socket.id) {
@@ -320,7 +357,14 @@ io.on("connection", (socket) => {
                         duration,
                         "Unknown",
                         new Date().toISOString()
-                    ]
+                    ],
+                    function (err) {
+                        if (err) {
+                            console.error("❌ DB INSERT ERROR:", err.message)
+                        } else {
+                            console.log("✅ HISTORY INSERTED with ID:", this.lastID)
+                        }
+                    }
                 )
 
                 rooms.delete(roomId)
