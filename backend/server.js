@@ -109,13 +109,8 @@ app.post("/upload", (req, res) => {
         room.videoState.currentTime = 0
         room.videoState.isPlaying = false
 
-        // Track movie name and start session
+        // Track movie name (session starts on first play, not upload)
         room.movieName = req.file.originalname
-
-        if (!room.sessionStartedAt) {
-            room.sessionStartedAt = Date.now()
-            console.log(`[SESSION STARTED] Room: ${roomId}`)
-        }
 
         // Notify all users in the room (including host)
         io.to(roomId).emit("changeVideo", { url: videoUrl })
@@ -144,8 +139,12 @@ io.on("connection", (socket) => {
                 isPlaying: false
             },
             movieName: null,
-            sessionStartedAt: null,
-            sessionEndedAt: null,
+            session: {
+                state: "IDLE",
+                startedAt: null,
+                lastPlayAt: null,
+                totalPlayTime: 0
+            },
             createdAt: Date.now()
         })
 
@@ -187,6 +186,20 @@ io.on("connection", (socket) => {
             room.videoState.isPlaying = true
             room.videoState.currentTime = currentTime
 
+            // ========== SESSION TRACKING ==========
+            if (room.session.state === "IDLE") {
+                // First play - start session
+                room.session.state = "PLAYING"
+                room.session.startedAt = Date.now()
+                room.session.lastPlayAt = Date.now()
+                console.log(`[SESSION STARTED] ${roomId} | First play`)
+            } else if (room.session.state === "PAUSED") {
+                // Resume from pause
+                room.session.lastPlayAt = Date.now()
+                room.session.state = "PLAYING"
+                console.log(`[SESSION RESUMED] ${roomId}`)
+            }
+
             // Broadcast to all viewers in the room
             socket.to(roomId).emit("play", { currentTime })
             console.log(`[PLAY] ${roomId} | Time: ${currentTime}s`)
@@ -200,6 +213,16 @@ io.on("connection", (socket) => {
         if (room && room.hostId === socket.id) {
             room.videoState.isPlaying = false
             room.videoState.currentTime = currentTime
+
+            // ========== SESSION TRACKING ==========
+            if (room.session.state === "PLAYING") {
+                // Accumulate play time (exclude paused time)
+                room.session.totalPlayTime +=
+                    (Date.now() - room.session.lastPlayAt)
+
+                room.session.state = "PAUSED"
+                console.log(`[SESSION PAUSED] ${roomId} | Total play time: ${Math.round(room.session.totalPlayTime / 1000)}s`)
+            }
 
             socket.to(roomId).emit("pause", { currentTime })
             console.log(`[PAUSE] ${roomId} | Time: ${currentTime}s`)
@@ -262,22 +285,24 @@ io.on("connection", (socket) => {
 
             // If host disconnected, save history and close the room
             if (room.hostId === socket.id) {
-                room.sessionEndedAt = Date.now()
+                // ========== GRACEFUL SESSION END ==========
+                // If still playing, add final play time
+                if (room.session.state === "PLAYING") {
+                    room.session.totalPlayTime +=
+                        (Date.now() - room.session.lastPlayAt)
+                }
 
-                const duration =
-                    room.sessionStartedAt
-                        ? Math.round((room.sessionEndedAt - room.sessionStartedAt) / 1000)
-                        : 0
+                room.session.state = "ENDED"
+                const duration = Math.round(room.session.totalPlayTime / 1000)
 
-                console.log("===== WATCH SESSION ENDED =====")
-                console.log("Room ID:", roomId)
+                console.log("===== WATCH SESSION SUMMARY =====")
+                console.log("Room:", roomId)
                 console.log("Movie:", room.movieName || "Unknown")
-                console.log("Host ID:", room.hostId)
-                console.log("Total Viewers:", room.members.length)
                 console.log("Duration (sec):", duration)
-                console.log("Started At:", room.sessionStartedAt ? new Date(room.sessionStartedAt).toLocaleString() : "N/A")
-                console.log("Ended At:", new Date(room.sessionEndedAt).toLocaleString())
-                console.log("================================")
+                console.log("Viewers:", room.members.length + 1) // +1 for host before removal
+                console.log("State:", room.session.state)
+                console.log("Started At:", room.session.startedAt ? new Date(room.session.startedAt).toLocaleString() : "N/A")
+                console.log("=================================")
 
                 // Save to database
                 db.run(
