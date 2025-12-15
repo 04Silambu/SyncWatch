@@ -173,3 +173,38 @@ socket.on("changeVideo", (data) => {
 socket.on("error-msg", (msg) => {
     alert(msg)
 })
+
+// ========== WATCH HISTORY ==========
+
+const loadHistory = async () => {
+    const res = await fetch("/history")
+    const data = await res.json()
+
+    const body = document.getElementById("history-body")
+    body.innerHTML = ""
+
+    data.forEach(h => {
+        const row = document.createElement("tr")
+
+        row.innerHTML = `
+            <td>${h.movieName}</td>
+            <td>${Math.round(h.duration)}</td>
+            <td>${new Date(h.watchedAt).toLocaleString()}</td>
+            <td><button onclick="deleteHistory(${h.id})">Delete</button></td>
+        `
+
+        body.appendChild(row)
+    })
+}
+
+const deleteHistory = async (id) => {
+    await fetch("/history/" + id, { method: "DELETE" })
+    loadHistory()
+}
+
+// Make deleteHistory available globally
+window.deleteHistory = deleteHistory
+
+// Load history when page loads
+loadHistory()
+

@@ -4,6 +4,7 @@ const { Server } = require("socket.io")
 const path = require("path")
 const multer = require("multer")
 const fs = require("fs")
+const sqlite3 = require("sqlite3").verbose()
 
 const app = express()
 const server = http.createServer(app)
@@ -11,6 +12,29 @@ const io = new Server(server)
 
 // Store room metadata with host-first architecture
 const rooms = new Map()
+
+// Initialize SQLite Database
+const db = new sqlite3.Database(
+    path.join(__dirname, "history.db"),
+    (err) => {
+        if (err) {
+            console.error("DB Error:", err.message)
+        } else {
+            console.log("SQLite DB connected")
+        }
+    }
+)
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        roomId TEXT,
+        movieName TEXT,
+        duration REAL,
+        genre TEXT,
+        watchedAt TEXT
+    )
+`)
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, "../uploads")
@@ -84,6 +108,10 @@ app.post("/upload", (req, res) => {
         room.videoState.url = videoUrl
         room.videoState.currentTime = 0
         room.videoState.isPlaying = false
+
+        // Track movie name and start time for history
+        room.movieName = req.file.originalname
+        room.startedAt = Date.now()
 
         // Notify all users in the room (including host)
         io.to(roomId).emit("changeVideo", { url: videoUrl })
@@ -197,17 +225,46 @@ io.on("connection", (socket) => {
         }
     })
 
+    // ========== REAL-TIME CHAT ==========
+    socket.on("chat-message", ({ roomId, message, role }) => {
+        if (!roomId || !message) return
+
+        io.to(roomId).emit("chat-message", {
+            message,
+            role,
+            time: new Date().toLocaleTimeString()
+        })
+
+        console.log(`[CHAT] ${roomId} | ${role}: ${message}`)
+    })
+
+
     // Cleanup on disconnect
     socket.on("disconnect", () => {
         for (const [roomId, room] of rooms.entries()) {
             // Remove user from room
             room.members = room.members.filter(id => id !== socket.id)
 
-            // If host disconnected, close the room
+            // If host disconnected, save history and close the room
             if (room.hostId === socket.id) {
+                const duration = (Date.now() - (room.startedAt || Date.now())) / 1000
+
+                db.run(
+                    `INSERT INTO history (roomId, movieName, duration, genre, watchedAt)
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        roomId,
+                        room.movieName || "Unknown",
+                        duration,
+                        "Unknown",
+                        new Date().toISOString()
+                    ]
+                )
+
                 rooms.delete(roomId)
                 io.to(roomId).emit("room-closed", { message: "Host disconnected" })
-                console.log(`[ROOM CLOSED] ${roomId} | Host disconnected`)
+
+                console.log(`[HISTORY SAVED] ${roomId} | Duration: ${Math.round(duration)}s`)
             }
             // If room is empty, delete it
             else if (room.members.length === 0) {
@@ -221,6 +278,35 @@ io.on("connection", (socket) => {
         }
         console.log(`[DISCONNECTED] ${socket.id}`)
     })
+})
+
+// ========== HISTORY ENDPOINTS ==========
+// Get all watch history
+app.get("/history", (req, res) => {
+    db.all(
+        "SELECT * FROM history ORDER BY watchedAt DESC",
+        [],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: err.message })
+            }
+            res.json(rows)
+        }
+    )
+})
+
+// Delete a history entry
+app.delete("/history/:id", (req, res) => {
+    db.run(
+        "DELETE FROM history WHERE id = ?",
+        [req.params.id],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: err.message })
+            }
+            res.json({ success: true })
+        }
+    )
 })
 
 server.listen(3000, () => {
