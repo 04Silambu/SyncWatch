@@ -4,6 +4,8 @@ const statusEl = document.getElementById("b")
 const videoEl = document.getElementById("e")
 const uploadSection = document.getElementById("upload-section")
 const videoUpload = document.getElementById("video-upload")
+const chatBox = document.getElementById("chat-box")
+const chatInput = document.getElementById("chat-input")
 
 let currentRole = null
 let currentRoomId = null
@@ -207,4 +209,28 @@ window.deleteHistory = deleteHistory
 
 // Load history when page loads
 loadHistory()
+
+// ========== REAL-TIME CHAT ==========
+
+const sendMessage = () => {
+    const text = chatInput.value.trim()
+    if (!text || !currentRoomId) return
+
+    socket.emit("chat-message", {
+        roomId: currentRoomId,
+        message: text,
+        role: currentRole
+    })
+
+    chatInput.value = ""
+}
+
+window.sendMessage = sendMessage
+
+socket.on("chat-message", (data) => {
+    const msg = document.createElement("div")
+    msg.innerHTML = `<b>${data.role}</b> [${data.time}]: ${data.message}`
+    chatBox.appendChild(msg)
+    chatBox.scrollTop = chatBox.scrollHeight
+})
 

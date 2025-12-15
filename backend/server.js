@@ -238,8 +238,8 @@ io.on("connection", (socket) => {
         console.log(`[CHAT] ${roomId} | ${role}: ${message}`)
     })
 
-
     // Cleanup on disconnect
+
     socket.on("disconnect", () => {
         for (const [roomId, room] of rooms.entries()) {
             // Remove user from room
