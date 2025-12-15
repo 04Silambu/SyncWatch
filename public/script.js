@@ -78,6 +78,11 @@ socket.on("room-created", (data) => {
     currentRole = "host"
     currentRoomId = data.roomId
     uploadSection.style.display = "block" // Show upload for host
+
+    // 🔒 Disable join UI for host
+    document.getElementById("c").disabled = true
+    document.querySelector("button[onclick='joinRoom()']").disabled = true
+
     console.log("Role:", currentRole)
 })
 

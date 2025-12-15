@@ -161,6 +161,12 @@ io.on("connection", (socket) => {
             return
         }
 
+        // 🔒 Prevent host from joining their own room
+        if (room.hostId === socket.id) {
+            socket.emit("error-msg", "Host is already in the room")
+            return
+        }
+
         socket.join(roomId)
         room.members.push(socket.id)
 
