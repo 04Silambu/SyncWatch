@@ -109,9 +109,13 @@ app.post("/upload", (req, res) => {
         room.videoState.currentTime = 0
         room.videoState.isPlaying = false
 
-        // Track movie name and start time for history
+        // Track movie name and start session
         room.movieName = req.file.originalname
-        room.startedAt = Date.now()
+
+        if (!room.sessionStartedAt) {
+            room.sessionStartedAt = Date.now()
+            console.log(`[SESSION STARTED] Room: ${roomId}`)
+        }
 
         // Notify all users in the room (including host)
         io.to(roomId).emit("changeVideo", { url: videoUrl })
@@ -133,12 +137,15 @@ io.on("connection", (socket) => {
         // Store room metadata with host-first pattern
         rooms.set(roomId, {
             hostId: socket.id,
+            members: [socket.id],
             videoState: {
                 url: null,
                 currentTime: 0,
                 isPlaying: false
             },
-            members: [socket.id],
+            movieName: null,
+            sessionStartedAt: null,
+            sessionEndedAt: null,
             createdAt: Date.now()
         })
 
@@ -238,6 +245,14 @@ io.on("connection", (socket) => {
         console.log(`[CHAT] ${roomId} | ${role}: ${message}`)
     })
 
+    // ========== END SESSION (OPTIONAL) ==========
+    socket.on("end-session", ({ roomId }) => {
+        const room = rooms.get(roomId)
+        if (room && room.hostId === socket.id) {
+            socket.disconnect()
+        }
+    })
+
     // Cleanup on disconnect
 
     socket.on("disconnect", () => {
@@ -247,8 +262,24 @@ io.on("connection", (socket) => {
 
             // If host disconnected, save history and close the room
             if (room.hostId === socket.id) {
-                const duration = (Date.now() - (room.startedAt || Date.now())) / 1000
+                room.sessionEndedAt = Date.now()
 
+                const duration =
+                    room.sessionStartedAt
+                        ? Math.round((room.sessionEndedAt - room.sessionStartedAt) / 1000)
+                        : 0
+
+                console.log("===== WATCH SESSION ENDED =====")
+                console.log("Room ID:", roomId)
+                console.log("Movie:", room.movieName || "Unknown")
+                console.log("Host ID:", room.hostId)
+                console.log("Total Viewers:", room.members.length)
+                console.log("Duration (sec):", duration)
+                console.log("Started At:", room.sessionStartedAt ? new Date(room.sessionStartedAt).toLocaleString() : "N/A")
+                console.log("Ended At:", new Date(room.sessionEndedAt).toLocaleString())
+                console.log("================================")
+
+                // Save to database
                 db.run(
                     `INSERT INTO history (roomId, movieName, duration, genre, watchedAt)
                      VALUES (?, ?, ?, ?, ?)`,
@@ -263,8 +294,6 @@ io.on("connection", (socket) => {
 
                 rooms.delete(roomId)
                 io.to(roomId).emit("room-closed", { message: "Host disconnected" })
-
-                console.log(`[HISTORY SAVED] ${roomId} | Duration: ${Math.round(duration)}s`)
             }
             // If room is empty, delete it
             else if (room.members.length === 0) {
