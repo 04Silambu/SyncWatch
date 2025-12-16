@@ -7,6 +7,9 @@ const fs = require("fs")
 const sqlite3 = require("sqlite3").verbose()
 const axios = require("axios")
 
+// Load movie recommendations dataset
+const recommendations = require("./recommendations.json")
+
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server)
@@ -169,17 +172,23 @@ app.post("/upload", (req, res) => {
             return res.status(403).json({ error: "Only host can upload video" })
         }
 
+        // Get manual movie metadata from host
+        const movieName = req.body.movieName || req.file.originalname
+        const manualGenre = req.body.genre || "" // Empty means auto-detect
+
         const videoUrl = `/uploads/${req.file.filename}`
 
         console.log(`[VIDEO UPLOADED] Room: ${roomId} | File: ${req.file.filename}`)
+        console.log(`[METADATA] Movie: "${movieName}" | Genre: ${manualGenre || "Auto-detect"}`)
 
         // Update room video state
         room.videoState.url = videoUrl
         room.videoState.currentTime = 0
         room.videoState.isPlaying = false
 
-        // Track movie name (session starts on first play, not upload)
-        room.movieName = req.file.originalname
+        // Track movie metadata (session starts on first play, not upload)
+        room.movieName = movieName
+        room.manualGenre = manualGenre // Store for later use in history save
 
         // Notify all users in the room (including host)
         io.to(roomId).emit("changeVideo", { url: videoUrl })
@@ -368,9 +377,13 @@ io.on("connection", (socket) => {
             console.log("Duration (sec):", duration)
             console.log("==========================================")
 
-            // Save to database with ML genre prediction
+            // Save to database - use manual genre if provided, otherwise ML prediction
             if (room.session.startedAt && duration > 0) {
-                predictGenre(room.movieName || "Unknown").then(prediction => {
+                if (room.manualGenre) {
+                    // Host manually specified genre
+                    const genreToSave = room.manualGenre
+                    console.log(`📋 Using manual genre: ${genreToSave}`)
+
                     db.run(
                         `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
                          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -378,19 +391,42 @@ io.on("connection", (socket) => {
                             roomId,
                             room.movieName || "Unknown",
                             duration,
-                            prediction.genre,
-                            prediction.confidence,
+                            genreToSave,
+                            1.0, // 100% confidence for manual entry
                             new Date().toISOString()
                         ],
                         function (err) {
                             if (err) {
                                 console.error("❌ DB INSERT ERROR:", err.message)
                             } else {
-                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (${(prediction.confidence * 100).toFixed(1)}%)`)
+                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${genreToSave} (Manual, 100%)`)
                             }
                         }
                     )
-                })
+                } else {
+                    // Use ML prediction
+                    predictGenre(room.movieName || "Unknown").then(prediction => {
+                        db.run(
+                            `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
+                             VALUES (?, ?, ?, ?, ?, ?)`,
+                            [
+                                roomId,
+                                room.movieName || "Unknown",
+                                duration,
+                                prediction.genre,
+                                prediction.confidence,
+                                new Date().toISOString()
+                            ],
+                            function (err) {
+                                if (err) {
+                                    console.error("❌ DB INSERT ERROR:", err.message)
+                                } else {
+                                    console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (ML, ${(prediction.confidence * 100).toFixed(1)}%)`)
+                                }
+                            }
+                        )
+                    })
+                }
             }
 
             // Notify all users that room is being deleted
@@ -457,8 +493,12 @@ io.on("connection", (socket) => {
                 console.log("Started At:", room.session.startedAt ? new Date(room.session.startedAt).toLocaleString() : "N/A")
                 console.log("=================================")
 
-                // Save to database with ML genre prediction
-                predictGenre(room.movieName || "Unknown").then(prediction => {
+                // Save to database - use manual genre if provided, otherwise ML prediction
+                if (room.manualGenre) {
+                    // Host manually specified genre
+                    const genreToSave = room.manualGenre
+                    console.log(`📋 Using manual genre: ${genreToSave}`)
+
                     db.run(
                         `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
                          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -466,19 +506,42 @@ io.on("connection", (socket) => {
                             roomId,
                             room.movieName || "Unknown",
                             duration,
-                            prediction.genre,
-                            prediction.confidence,
+                            genreToSave,
+                            1.0, // 100% confidence for manual entry
                             new Date().toISOString()
                         ],
                         function (err) {
                             if (err) {
                                 console.error("❌ DB INSERT ERROR:", err.message)
                             } else {
-                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (${(prediction.confidence * 100).toFixed(1)}%)`)
+                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${genreToSave} (Manual, 100%)`)
                             }
                         }
                     )
-                })
+                } else {
+                    // Use ML prediction
+                    predictGenre(room.movieName || "Unknown").then(prediction => {
+                        db.run(
+                            `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
+                             VALUES (?, ?, ?, ?, ?, ?)`,
+                            [
+                                roomId,
+                                room.movieName || "Unknown",
+                                duration,
+                                prediction.genre,
+                                prediction.confidence,
+                                new Date().toISOString()
+                            ],
+                            function (err) {
+                                if (err) {
+                                    console.error("❌ DB INSERT ERROR:", err.message)
+                                } else {
+                                    console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (ML, ${(prediction.confidence * 100).toFixed(1)}%)`)
+                                }
+                            }
+                        )
+                    })
+                }
 
                 rooms.delete(roomId)
                 io.to(roomId).emit("room-closed", { message: "Host disconnected" })
@@ -524,6 +587,65 @@ app.delete("/history/:id", (req, res) => {
             res.json({ success: true })
         }
     )
+})
+
+// ========== RECOMMENDATIONS ENDPOINT ==========
+// Get personalized movie recommendations based on watch history
+app.get("/recommendations", (req, res) => {
+    db.all("SELECT genre, movieName FROM history", [], (err, rows) => {
+        if (err) {
+            console.error("❌ Recommendation query error:", err.message)
+            return res.json({ genre: null, movies: [] })
+        }
+
+        // Handle empty history
+        if (!rows || rows.length === 0) {
+            console.log("ℹ️  No watch history found")
+            return res.json({ genre: null, movies: [] })
+        }
+
+        // Count genre frequencies
+        const genreCount = {}
+        const watched = new Set()
+
+        rows.forEach(row => {
+            // Count valid genres
+            if (row.genre && row.genre !== "Unknown") {
+                genreCount[row.genre] = (genreCount[row.genre] || 0) + 1
+            }
+            // Track watched movies to exclude from recommendations
+            if (row.movieName) {
+                watched.add(row.movieName.toLowerCase().trim())
+            }
+        })
+
+        // Find most-watched genre
+        const topGenre = Object.keys(genreCount)
+            .sort((a, b) => genreCount[b] - genreCount[a])[0]
+
+        // Handle no valid genres
+        if (!topGenre || !recommendations[topGenre]) {
+            console.log("ℹ️  No valid genre found in history")
+            return res.json({ genre: null, movies: [] })
+        }
+
+        // Get recommendations and filter out already-watched movies
+        const suggested = recommendations[topGenre]
+            .filter(movie => {
+                const normalized = movie.toLowerCase().trim()
+                return !watched.has(normalized)
+            })
+            .slice(0, 5) // Top 5 recommendations
+
+        console.log(`📊 Recommendations: Top genre = ${topGenre} (${genreCount[topGenre]} views)`)
+        console.log(`   Suggested: ${suggested.length} movies`)
+
+        res.json({
+            genre: topGenre,
+            count: genreCount[topGenre],
+            movies: suggested
+        })
+    })
 })
 
 server.listen(3000, () => {

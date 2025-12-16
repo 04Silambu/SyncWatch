@@ -26,9 +26,42 @@
     </div>
 
     <div id="upload-section" style="display: none; margin: 20px 0;">
+        <h4>Upload Video (Host Only)</h4>
 
-        <label for="video-upload">Upload Video (Host Only):</label>
-        <input type="file" id="video-upload" accept="video/*">
+        <div style="margin: 10px 0;">
+            <label for="movie-name-input">Movie Name: <span style="color: red;">*</span></label><br>
+            <input type="text" id="movie-name-input" placeholder="Enter movie name" style="width: 300px; padding: 5px;">
+        </div>
+
+        <div style="margin: 10px 0;">
+            <label for="genre-select">Genre: <span style="color: red;">*</span></label><br>
+            <select id="genre-select" style="width: 312px; padding: 5px;">
+                <option value="">-- Select Genre --</option>
+                <option value="Action">Action</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Animation">Animation</option>
+                <option value="Comedy">Comedy</option>
+                <option value="Drama">Drama</option>
+                <option value="Horror">Horror</option>
+                <option value="Thriller">Thriller</option>
+                <option value="Romance">Romance</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Crime">Crime</option>
+                <option value="Biography">Biography</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Musical">Musical</option>
+            </select>
+        </div>
+
+        <div style="margin: 10px 0;">
+            <label for="video-upload">Select Video File: <span style="color: red;">*</span></label><br>
+            <input type="file" id="video-upload" accept="video/*" disabled>
+            <p id="upload-hint" style="color: #ff6b6b; font-size: 12px; margin: 5px 0;">
+                ⚠️ Please enter movie name and select genre first
+            </p>
+        </div>
     </div>
 
     <video id="e" controls width="400"></video>
@@ -64,6 +97,10 @@
         </thead>
         <tbody id="history-body"></tbody>
     </table>
+
+    <h3>Recommended for You</h3>
+    <p id="recommendation-info" style="color: #666; font-size: 14px;"></p>
+    <ul id="recommendation-list" style="list-style: none; padding: 0;"></ul>
 
 
     <script src="/socket.io/socket.io.js"></script>

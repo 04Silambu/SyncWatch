@@ -1,0 +1,62 @@
+{
+    "Action": [
+        "Mad Max: Fury Road",
+        "John Wick",
+        "Die Hard",
+        "The Dark Knight",
+        "Mission: Impossible - Fallout",
+        "The Raid",
+        "Baby Driver",
+        "Atomic Blonde",
+        "The Bourne Identity",
+        "Kill Bill"
+    ],
+    "Drama": [
+        "The Shawshank Redemption",
+        "Forrest Gump",
+        "Fight Club",
+        "The Green Mile",
+        "Good Will Hunting",
+        "The Pursuit of Happyness",
+        "Schindler's List",
+        "A Beautiful Mind",
+        "The Pianist",
+        "Manchester by the Sea"
+    ],
+    "Comedy": [
+        "Superbad",
+        "The Hangover",
+        "Step Brothers",
+        "21 Jump Street",
+        "Bridesmaids",
+        "Anchorman",
+        "The Grand Budapest Hotel",
+        "Knives Out",
+        "Crazy Rich Asians",
+        "Get Out"
+    ],
+    "Animation": [
+        "Up",
+        "Coco",
+        "Inside Out",
+        "Finding Nemo",
+        "Spirited Away",
+        "Toy Story",
+        "WALL-E",
+        "Spider-Man: Into the Spider-Verse",
+        "The Incredibles",
+        "How to Train Your Dragon"
+    ],
+    "Adventure": [
+        "Indiana Jones and the Last Crusade",
+        "Pirates of the Caribbean",
+        "Jurassic Park",
+        "The Mummy",
+        "Interstellar",
+        "Avatar",
+        "The Lord of the Rings",
+        "Star Wars",
+        "Guardians of the Galaxy",
+        "The Hobbit"
+    ]
+}

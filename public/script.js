@@ -22,6 +22,46 @@ const joinRoom = () => {
 window.createRoom = createRoom
 window.joinRoom = joinRoom
 
+// ========== UPLOAD VALIDATION ==========
+// Enable video upload only when movie name and genre are filled
+const validateUploadInputs = () => {
+    const movieNameInput = document.getElementById("movie-name-input")
+    const genreSelect = document.getElementById("genre-select")
+    const videoUpload = document.getElementById("video-upload")
+    const uploadHint = document.getElementById("upload-hint")
+
+    if (!movieNameInput || !genreSelect || !videoUpload) return
+
+    const movieName = movieNameInput.value.trim()
+    const genre = genreSelect.value
+
+    if (movieName && genre) {
+        // Both filled - enable video upload
+        videoUpload.disabled = false
+        if (uploadHint) {
+            uploadHint.style.display = "none"
+        }
+    } else {
+        // Not filled - disable video upload
+        videoUpload.disabled = true
+        if (uploadHint) {
+            uploadHint.style.display = "block"
+        }
+    }
+}
+
+// Add listeners when upload section is shown
+const setupUploadValidation = () => {
+    const movieNameInput = document.getElementById("movie-name-input")
+    const genreSelect = document.getElementById("genre-select")
+
+    if (movieNameInput && genreSelect) {
+        movieNameInput.addEventListener("input", validateUploadInputs)
+        genreSelect.addEventListener("change", validateUploadInputs)
+        validateUploadInputs() // Initial check
+    }
+}
+
 // ========== ROOM CONTROL FUNCTIONS ==========
 const deleteRoom = () => {
     if (currentRole === "host" && currentRoomId) {
@@ -53,11 +93,26 @@ videoUpload.addEventListener("change", async (e) => {
             return
         }
 
+        // Get movie metadata from inputs
+        const movieNameInput = document.getElementById("movie-name-input")
+        const genreSelect = document.getElementById("genre-select")
+
+        const movieName = movieNameInput.value.trim()
+        const selectedGenre = genreSelect.value
+
+        // Validate movie name
+        if (!movieName) {
+            alert("Please enter a movie name before uploading!")
+            return
+        }
+
         statusEl.innerText = "Uploading video... Please wait."
 
         const formData = new FormData()
         formData.append("video", file)
         formData.append("roomId", currentRoomId)
+        formData.append("movieName", movieName)
+        formData.append("genre", selectedGenre) // Empty if "Auto-detect"
 
         try {
             const response = await fetch("/upload", {
@@ -75,6 +130,11 @@ videoUpload.addEventListener("change", async (e) => {
                 videoEl.src = data.url
                 statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host) - Video uploaded!"
                 console.log("[HOST] Video uploaded successfully:", data.url)
+                console.log(`[HOST] Movie: ${movieName}, Genre: ${selectedGenre || 'Auto-detect'}`)
+
+                // Clear inputs for next upload
+                movieNameInput.value = ""
+                genreSelect.value = ""
             } else {
                 alert("Upload failed: " + (data.error || "Unknown error"))
                 statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host)"
@@ -85,7 +145,7 @@ videoUpload.addEventListener("change", async (e) => {
             statusEl.innerText = "Room ID: " + currentRoomId + " (You are Host)"
         }
 
-        videoUpload.value = "" // Reset input for next upload
+        videoUpload.value = "" // Reset file input for next upload
     }
 })
 
@@ -97,6 +157,9 @@ socket.on("room-created", (data) => {
     currentRole = "host"
     currentRoomId = data.roomId
     uploadSection.style.display = "block" // Show upload for host
+
+    // Setup upload validation
+    setupUploadValidation()
 
     // 🔒 Disable join UI for host
     document.getElementById("c").disabled = true
@@ -265,6 +328,53 @@ window.deleteHistory = deleteHistory
 
 // Load history when page loads
 loadHistory()
+
+// ========== MOVIE RECOMMENDATIONS ==========
+
+const loadRecommendations = async () => {
+    console.log("🎬 Fetching recommendations...")
+    try {
+        const res = await fetch("/recommendations")
+        const data = await res.json()
+        console.log("📊 Recommendations data:", data)
+
+        const list = document.getElementById("recommendation-list")
+        const info = document.getElementById("recommendation-info")
+
+        list.innerHTML = ""
+        info.innerHTML = ""
+
+        // Handle no recommendations
+        if (!data.movies || data.movies.length === 0) {
+            info.innerText = "Watch some movies to get personalized recommendations!"
+            info.style.color = "#999"
+            return
+        }
+
+        // Show genre info
+        info.innerText = `Based on your love for ${data.genre} (${data.count} ${data.count === 1 ? 'view' : 'views'})`
+        info.style.color = "#667eea"
+        info.style.fontWeight = "600"
+
+        // Display recommendations
+        data.movies.forEach(movie => {
+            const li = document.createElement("li")
+            li.innerText = `🎥 ${movie}`
+            li.style.padding = "8px"
+            li.style.margin = "4px 0"
+            li.style.background = "#f5f5f5"
+            li.style.borderRadius = "4px"
+            list.appendChild(li)
+        })
+
+        console.log("✅ Displayed", data.movies.length, "recommendations")
+    } catch (error) {
+        console.error("❌ Failed to load recommendations:", error)
+    }
+}
+
+// Load recommendations when page loads
+loadRecommendations()
 
 // ========== REAL-TIME CHAT ==========
 
