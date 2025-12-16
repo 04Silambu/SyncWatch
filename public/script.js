@@ -229,8 +229,22 @@ const loadHistory = async () => {
     data.forEach(h => {
         const row = document.createElement("tr")
 
+        // Format genre with confidence badge
+        const confidence = h.genre_confidence || 0
+        const confidencePercent = (confidence * 100).toFixed(0)
+
+        // Color code by confidence level
+        let confidenceClass = "low"
+        if (confidence >= 0.5) confidenceClass = "high"
+        else if (confidence >= 0.3) confidenceClass = "medium"
+
+        const genreHtml = h.genre !== "Unknown"
+            ? `<span class="genre-badge">${h.genre}</span> <span class="confidence-${confidenceClass}">${confidencePercent}%</span>`
+            : `<span style="color: #999;">Unknown</span>`
+
         row.innerHTML = `
             <td>${h.movieName}</td>
+            <td>${genreHtml}</td>
             <td>${Math.round(h.duration)}</td>
             <td>${new Date(h.watchedAt).toLocaleString()}</td>
             <td><button onclick="deleteHistory(${h.id})">Delete</button></td>

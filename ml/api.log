@@ -45,3 +45,33 @@
 2025-12-16 19:10:35,376 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:35] "[31m[1mPOST /predict HTTP/1.1[0m" 400 -
 2025-12-16 19:10:37,417 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:37] "[33mGET /invalid HTTP/1.1[0m" 404 -
 2025-12-16 19:11:14,961 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:11:14] "GET / HTTP/1.1" 200 -
+2025-12-16 19:25:05,659 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:25:05,659 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:25:05,659 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:25:05,690 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.234.162.8:5000
+2025-12-16 19:25:05,690 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 19:25:05,691 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 19:25:07,452 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:25:07,453 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:25:07,453 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:25:07,470 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 19:25:07,472 - werkzeug - INFO -  * Debugger PIN: 379-249-102
+2025-12-16 19:40:03,050 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:40:03,050 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:40:03,050 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:40:03,080 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.234.162.8:5000
+2025-12-16 19:40:03,080 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 19:40:03,082 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 19:40:04,681 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:40:04,681 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:40:04,681 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:40:04,697 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 19:40:04,699 - werkzeug - INFO -  * Debugger PIN: 379-249-102
+2025-12-16 19:41:09,800 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:41:09] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:44:01,151 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:44:01] "POST /predict HTTP/1.1" 200 -

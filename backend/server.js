@@ -5,13 +5,21 @@ const path = require("path")
 const multer = require("multer")
 const fs = require("fs")
 const sqlite3 = require("sqlite3").verbose()
+const axios = require("axios")
 
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server)
 
+// Enable JSON body parsing for ML API endpoint
+app.use(express.json())
+
 // Store room metadata with host-first architecture
 const rooms = new Map()
+
+// ML API Configuration
+const ML_API_URL = "http://localhost:5000"
+const ML_API_ENABLED = true // Set to false to disable ML predictions
 
 // Initialize SQLite Database
 const db = new sqlite3.Database(
@@ -32,6 +40,7 @@ db.run(`
         movieName TEXT,
         duration REAL,
         genre TEXT,
+        genre_confidence REAL DEFAULT 0.0,
         watchedAt TEXT
     )
 `)
@@ -72,6 +81,66 @@ app.use("/uploads", express.static(uploadsDir)) // Serve uploaded videos
 const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 8)
 }
+
+// ========== ML GENRE PREDICTION ==========
+/**
+ * Call ML API to predict genre from movie title
+ * Returns { genre, confidence } or fallback values on error
+ */
+async function predictGenre(movieName) {
+    if (!ML_API_ENABLED) {
+        return { genre: "Unknown", confidence: 0.0 }
+    }
+
+    try {
+        console.log(`[ML API] Predicting genre for: "${movieName}"`)
+
+        const response = await axios.post(`${ML_API_URL}/predict`, {
+            title: movieName
+        }, {
+            timeout: 5000 // 5 second timeout
+        })
+
+        const prediction = response.data.prediction
+        console.log(`[ML API] ✅ Prediction: ${prediction.predicted_genre} (${(prediction.confidence * 100).toFixed(1)}%)`)
+
+        return {
+            genre: prediction.predicted_genre,
+            confidence: prediction.confidence
+        }
+    } catch (error) {
+        if (error.code === 'ECONNREFUSED') {
+            console.error('[ML API] ❌ Connection refused - ML API not running')
+        } else if (error.code === 'ETIMEDOUT') {
+            console.error('[ML API] ❌ Request timeout')
+        } else {
+            console.error('[ML API] ❌ Error:', error.message)
+        }
+
+        // Fallback to Unknown genre
+        return { genre: "Unknown", confidence: 0.0 }
+    }
+}
+
+// API endpoint for genre prediction (called from frontend)
+app.post("/api/predict-genre", async (req, res) => {
+    const { movieName } = req.body
+
+    if (!movieName || movieName.trim().length === 0) {
+        return res.status(400).json({ error: "Movie name is required" })
+    }
+
+    try {
+        const prediction = await predictGenre(movieName)
+        res.json(prediction)
+    } catch (error) {
+        res.status(500).json({
+            error: "Prediction failed",
+            genre: "Unknown",
+            confidence: 0.0
+        })
+    }
+})
 
 // ========== VIDEO UPLOAD ENDPOINT ==========
 app.post("/upload", (req, res) => {
@@ -283,6 +352,47 @@ io.on("connection", (socket) => {
 
         // Verify host authority
         if (room && room.hostId === socket.id) {
+            // ========== SAVE HISTORY BEFORE DELETING ==========
+            // If still playing, add final play time
+            if (room.session.state === "PLAYING") {
+                room.session.totalPlayTime +=
+                    (Date.now() - room.session.lastPlayAt)
+            }
+
+            room.session.state = "ENDED"
+            const duration = Math.round(room.session.totalPlayTime / 1000)
+
+            console.log("===== WATCH SESSION SUMMARY (DELETE) =====")
+            console.log("Room:", roomId)
+            console.log("Movie:", room.movieName || "Unknown")
+            console.log("Duration (sec):", duration)
+            console.log("==========================================")
+
+            // Save to database with ML genre prediction
+            if (room.session.startedAt && duration > 0) {
+                predictGenre(room.movieName || "Unknown").then(prediction => {
+                    db.run(
+                        `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
+                         VALUES (?, ?, ?, ?, ?, ?)`,
+                        [
+                            roomId,
+                            room.movieName || "Unknown",
+                            duration,
+                            prediction.genre,
+                            prediction.confidence,
+                            new Date().toISOString()
+                        ],
+                        function (err) {
+                            if (err) {
+                                console.error("❌ DB INSERT ERROR:", err.message)
+                            } else {
+                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (${(prediction.confidence * 100).toFixed(1)}%)`)
+                            }
+                        }
+                    )
+                })
+            }
+
             // Notify all users that room is being deleted
             io.to(roomId).emit("room-closed", { message: "Room has been deleted by host" })
 
@@ -347,25 +457,28 @@ io.on("connection", (socket) => {
                 console.log("Started At:", room.session.startedAt ? new Date(room.session.startedAt).toLocaleString() : "N/A")
                 console.log("=================================")
 
-                // Save to database
-                db.run(
-                    `INSERT INTO history (roomId, movieName, duration, genre, watchedAt)
-                     VALUES (?, ?, ?, ?, ?)`,
-                    [
-                        roomId,
-                        room.movieName || "Unknown",
-                        duration,
-                        "Unknown",
-                        new Date().toISOString()
-                    ],
-                    function (err) {
-                        if (err) {
-                            console.error("❌ DB INSERT ERROR:", err.message)
-                        } else {
-                            console.log("✅ HISTORY INSERTED with ID:", this.lastID)
+                // Save to database with ML genre prediction
+                predictGenre(room.movieName || "Unknown").then(prediction => {
+                    db.run(
+                        `INSERT INTO history (roomId, movieName, duration, genre, genre_confidence, watchedAt)
+                         VALUES (?, ?, ?, ?, ?, ?)`,
+                        [
+                            roomId,
+                            room.movieName || "Unknown",
+                            duration,
+                            prediction.genre,
+                            prediction.confidence,
+                            new Date().toISOString()
+                        ],
+                        function (err) {
+                            if (err) {
+                                console.error("❌ DB INSERT ERROR:", err.message)
+                            } else {
+                                console.log(`✅ HISTORY INSERTED with ID: ${this.lastID} | Genre: ${prediction.genre} (${(prediction.confidence * 100).toFixed(1)}%)`)
+                            }
                         }
-                    }
-                )
+                    )
+                })
 
                 rooms.delete(roomId)
                 io.to(roomId).emit("room-closed", { message: "Host disconnected" })
