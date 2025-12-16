@@ -1,0 +1,47 @@
+2025-12-16 19:07:28,553 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:07:28,553 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:07:28,553 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:07:28,651 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.234.162.8:5000
+2025-12-16 19:07:28,651 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 19:07:28,653 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 19:07:30,521 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:07:30,522 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:07:30,522 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:07:30,541 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 19:07:30,543 - werkzeug - INFO -  * Debugger PIN: 379-249-102
+2025-12-16 19:07:30,590 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:07:30] "GET / HTTP/1.1" 200 -
+2025-12-16 19:07:30,622 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:07:30] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-12-16 19:10:00,998 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:10:00,998 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:10:00,998 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:10:01,034 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.234.162.8:5000
+2025-12-16 19:10:01,035 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 19:10:01,036 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 19:10:02,998 - __main__ - INFO -    Model type: LogisticRegression
+2025-12-16 19:10:02,998 - __main__ - INFO -    Classes: ['Action', 'Adventure', 'Animation', 'Comedy', 'Drama']
+2025-12-16 19:10:02,998 - __main__ - INFO -    Vocabulary size: 697
+2025-12-16 19:10:03,016 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 19:10:03,018 - werkzeug - INFO -  * Debugger PIN: 379-249-102
+2025-12-16 19:10:03,051 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:03] "GET / HTTP/1.1" 200 -
+2025-12-16 19:10:14,986 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:14] "GET / HTTP/1.1" 200 -
+2025-12-16 19:10:17,031 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:17] "GET /info HTTP/1.1" 200 -
+2025-12-16 19:10:19,128 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:19] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:21,184 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:21] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:21,612 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:21] "GET / HTTP/1.1" 200 -
+2025-12-16 19:10:23,200 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:23] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:25,231 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:25] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:27,263 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:27] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:28,709 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:28] "GET /info HTTP/1.1" 200 -
+2025-12-16 19:10:29,292 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:29] "POST /predict HTTP/1.1" 200 -
+2025-12-16 19:10:31,309 - __main__ - INFO - Batch prediction: 5 successful, 0 failed
+2025-12-16 19:10:31,309 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:31] "POST /batch-predict HTTP/1.1" 200 -
+2025-12-16 19:10:33,328 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:33] "[31m[1mPOST /predict HTTP/1.1[0m" 400 -
+2025-12-16 19:10:35,376 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:35] "[31m[1mPOST /predict HTTP/1.1[0m" 400 -
+2025-12-16 19:10:37,417 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:10:37] "[33mGET /invalid HTTP/1.1[0m" 404 -
+2025-12-16 19:11:14,961 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 19:11:14] "GET / HTTP/1.1" 200 -
