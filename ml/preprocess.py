@@ -12,6 +12,7 @@ RAW_DATA_PATH = "data/raw/imdb_movies.csv"
 PROCESSED_DATA_PATH = "data/processed/movies_clean.csv"
 REQUIRED_COLUMNS = ["movie_name", "genre"]  # Updated to match actual CSV columns
 SAMPLE_SIZE = 3000
+MIN_SAMPLES_PER_GENRE = 50  # Higher threshold since we have fewer genres
 RANDOM_STATE = 42
 
 
@@ -42,6 +43,32 @@ def load_data(file_path, columns):
         raise RuntimeError(f"❌ Error loading data: {str(e)}")
 
 
+def map_genres_to_core(genre):
+    """Map genres to 5 core classes for better accuracy"""
+    genre = genre.strip().lower()
+    
+    # Define genre mapping
+    genre_map = {
+        # Keep as is
+        "action": "Action",
+        "drama": "Drama", 
+        "comedy": "Comedy",
+        "animation": "Animation",
+        "adventure": "Adventure",
+        
+        # Merge similar genres
+        "biography": "Drama",      # Biography → Drama
+        "history": "Drama",        # History → Drama
+        "fantasy": "Adventure",    # Fantasy → Adventure
+        "crime": "Action",         # Crime → Action
+        "thriller": "Action",      # Thriller → Action
+        "sci-fi": "Adventure",     # Sci-Fi → Adventure
+        "horror": "Action",        # Horror → Action (if present)
+    }
+    
+    return genre_map.get(genre, "Drama")  # Default to Drama if unknown
+
+
 def clean_data(df):
     """Clean and transform the dataset"""
     initial_count = len(df)
@@ -58,6 +85,10 @@ def clean_data(df):
     
     # Normalize titles: lowercase and strip whitespace
     df["title"] = df["title"].str.lower().str.strip()
+    
+    # MAP GENRES TO 5 CORE CLASSES (NEW!)
+    print("🔄 Mapping genres to 5 core classes...")
+    df["genre"] = df["genre"].apply(map_genres_to_core)
     
     # Remove duplicates
     initial_count = len(df)
