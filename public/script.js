@@ -153,9 +153,17 @@ videoUpload.addEventListener("change", async (e) => {
 
 // HOST CREATED ROOM
 socket.on("room-created", (data) => {
-    statusEl.innerText = "Room ID: " + data.roomId + " (You are Host)"
+    statusEl.innerText = "Connected as Host"
     currentRole = "host"
     currentRoomId = data.roomId
+
+    // Update new UI elements
+    updateRoleBadge("host")
+    updateRoomBadge(data.roomId)
+    showLiveIndicator()
+    updateUIForRoomState(true)
+    hideViewerOverlay()
+
     uploadSection.style.display = "block" // Show upload for host
 
     // Setup upload validation
@@ -174,10 +182,17 @@ socket.on("room-created", (data) => {
 
 // VIEWER JOINED ROOM
 socket.on("room-joined", (data) => {
-    statusEl.innerText = "Joined Room: " + data.roomId + " (Viewer)"
+    statusEl.innerText = "Connected as Viewer"
     currentRole = "viewer"
     currentRoomId = data.roomId
     videoEl.controls = false
+
+    // Update new UI elements
+    updateRoleBadge("viewer")
+    updateRoomBadge(data.roomId)
+    showLiveIndicator()
+    updateUIForRoomState(true)
+    // Overlay removed - viewers can see video clearly
 
     // Show exit room button for viewer
     document.getElementById("room-controls").style.display = "block"
@@ -353,19 +368,10 @@ const loadRecommendations = async () => {
 
         // Show genre info
         info.innerText = `Based on your love for ${data.genre} (${data.count} ${data.count === 1 ? 'view' : 'views'})`
-        info.style.color = "#667eea"
-        info.style.fontWeight = "600"
+        info.style.display = "block"
 
-        // Display recommendations
-        data.movies.forEach(movie => {
-            const li = document.createElement("li")
-            li.innerText = `🎥 ${movie}`
-            li.style.padding = "8px"
-            li.style.margin = "4px 0"
-            li.style.background = "#f5f5f5"
-            li.style.borderRadius = "4px"
-            list.appendChild(li)
-        })
+        // Display recommendations using new card UI
+        renderRecommendationCards(data.movies)
 
         console.log("✅ Displayed", data.movies.length, "recommendations")
     } catch (error) {
@@ -394,9 +400,7 @@ const sendMessage = () => {
 window.sendMessage = sendMessage
 
 socket.on("chat-message", (data) => {
-    const msg = document.createElement("div")
-    msg.innerHTML = `<b>${data.role}</b> [${data.time}]: ${data.message}`
-    chatBox.appendChild(msg)
-    chatBox.scrollTop = chatBox.scrollHeight
+    // Use the new bubble rendering function
+    renderChatMessage(data)
 })
 

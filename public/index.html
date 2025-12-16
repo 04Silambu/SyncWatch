@@ -1,109 +1,161 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>SyncWatch</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncWatch - Real-Time Video Sync</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <h2>SyncWatch – Phase 2</h2>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="logo">🎬 SyncWatch</h1>
+            <div class="header-meta">
+                <span id="room-badge" class="pill-badge" style="display: none;"></span>
+                <span id="role-badge" class="pill-badge" style="display: none;"></span>
+                <span id="live-indicator" class="live-indicator" style="display: none;">
+                    <span class="live-dot"></span> LIVE
+                </span>
+            </div>
+        </div>
+    </header>
 
-    <button onclick="createRoom()">Create Room</button>
+    <!-- Main Container -->
+    <div class="main-container">
 
-    <p id="b"></p>
+        <!-- Sidebar (Room Controls) -->
+        <aside class="sidebar">
+            <div class="control-panel">
+                <h3>Room Controls</h3>
 
-    <input id="c" placeholder="Enter Room ID">
-    <button onclick="joinRoom()">Join Room</button>
+                <!-- Before joining/creating room -->
+                <div id="pre-room-controls">
+                    <div class="control-section">
+                        <button class="btn btn-primary btn-full" onclick="createRoom()">Create Room</button>
+                    </div>
 
-    <!-- Room Control Buttons -->
-    <div id="room-controls" style="display: none; margin: 20px 0;">
-        <button id="delete-room-btn" onclick="deleteRoom()" style="background: red; color: white; display: none;">Delete
-            Room</button>
-        <button id="exit-room-btn" onclick="exitRoom()" style="background: orange; color: white; display: none;">Exit
-            Room</button>
+                    <div class="control-section">
+                        <label class="control-label">Join Existing Room</label>
+                        <input type="text" id="c" placeholder="Enter Room ID">
+                        <button class="btn btn-secondary btn-full" onclick="joinRoom()" style="margin-top: 0.5rem;">Join
+                            Room</button>
+                    </div>
+                </div>
+
+                <!-- After joining room -->
+                <div id="post-room-controls" style="display: none;">
+                    <div class="control-section">
+                        <p id="b" style="font-size: 0.875rem; color: var(--text-secondary);"></p>
+                    </div>
+
+                    <!-- Room action buttons -->
+                    <div id="room-controls" style="display: none;">
+                        <button id="delete-room-btn" class="btn btn-danger btn-full" onclick="deleteRoom()"
+                            style="display: none;">Delete Room</button>
+                        <button id="exit-room-btn" class="btn btn-secondary btn-full" onclick="exitRoom()"
+                            style="display: none;">Exit Room</button>
+                    </div>
+
+                    <!-- Upload Section (Host Only) -->
+                    <div id="upload-section" style="display: none;">
+                        <h4 style="margin: 1rem 0 0.75rem 0; font-size: 1rem;">Upload Video</h4>
+
+                        <div class="control-section">
+                            <label class="control-label">Movie Name *</label>
+                            <input type="text" id="movie-name-input" placeholder="Enter movie name">
+                        </div>
+
+                        <div class="control-section">
+                            <label class="control-label">Genre *</label>
+                            <select id="genre-select">
+                                <option value="">-- Select Genre --</option>
+                                <option value="Action">Action</option>
+                                <option value="Adventure">Adventure</option>
+                                <option value="Animation">Animation</option>
+                                <option value="Comedy">Comedy</option>
+                                <option value="Drama">Drama</option>
+                                <option value="Horror">Horror</option>
+                                <option value="Thriller">Thriller</option>
+                                <option value="Romance">Romance</option>
+                                <option value="Sci-Fi">Sci-Fi</option>
+                                <option value="Fantasy">Fantasy</option>
+                                <option value="Mystery">Mystery</option>
+                                <option value="Crime">Crime</option>
+                                <option value="Biography">Biography</option>
+                                <option value="Documentary">Documentary</option>
+                                <option value="Musical">Musical</option>
+                            </select>
+                        </div>
+
+                        <div class="control-section">
+                            <label class="control-label">Video File *</label>
+                            <input type="file" id="video-upload" accept="video/*" disabled>
+                            <p id="upload-hint">⚠️ Please enter movie name and select genre first</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content-area">
+
+            <!-- Video Player Section -->
+            <section class="video-section">
+                <div class="video-container">
+                    <video id="e" controls></video>
+                </div>
+            </section>
+
+            <!-- Chat Section -->
+            <section class="chat-section">
+                <div class="chat-header">Live Chat</div>
+                <div class="chat-messages" id="chat-box"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Send a message...">
+                    <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                </div>
+            </section>
+
+        </main>
+
     </div>
 
-    <div id="upload-section" style="display: none; margin: 20px 0;">
-        <h4>Upload Video (Host Only)</h4>
+    <!-- History & Recommendations (Below fold) -->
+    <section class="data-section">
 
-        <div style="margin: 10px 0;">
-            <label for="movie-name-input">Movie Name: <span style="color: red;">*</span></label><br>
-            <input type="text" id="movie-name-input" placeholder="Enter movie name" style="width: 300px; padding: 5px;">
+        <!-- Watch History -->
+        <h2 class="section-title">Watch History</h2>
+        <div class="history-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Movie</th>
+                        <th>Genre</th>
+                        <th>Duration</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
         </div>
 
-        <div style="margin: 10px 0;">
-            <label for="genre-select">Genre: <span style="color: red;">*</span></label><br>
-            <select id="genre-select" style="width: 312px; padding: 5px;">
-                <option value="">-- Select Genre --</option>
-                <option value="Action">Action</option>
-                <option value="Adventure">Adventure</option>
-                <option value="Animation">Animation</option>
-                <option value="Comedy">Comedy</option>
-                <option value="Drama">Drama</option>
-                <option value="Horror">Horror</option>
-                <option value="Thriller">Thriller</option>
-                <option value="Romance">Romance</option>
-                <option value="Sci-Fi">Sci-Fi</option>
-                <option value="Fantasy">Fantasy</option>
-                <option value="Mystery">Mystery</option>
-                <option value="Crime">Crime</option>
-                <option value="Biography">Biography</option>
-                <option value="Documentary">Documentary</option>
-                <option value="Musical">Musical</option>
-            </select>
+        <!-- Recommendations -->
+        <div class="recommendations-section">
+            <h2 class="section-title">Recommended for You</h2>
+            <p id="recommendation-info" class="recommendation-info"></p>
+            <div id="recommendation-list" class="recommendations-grid"></div>
         </div>
 
-        <div style="margin: 10px 0;">
-            <label for="video-upload">Select Video File: <span style="color: red;">*</span></label><br>
-            <input type="file" id="video-upload" accept="video/*" disabled>
-            <p id="upload-hint" style="color: #ff6b6b; font-size: 12px; margin: 5px 0;">
-                ⚠️ Please enter movie name and select genre first
-            </p>
-        </div>
-    </div>
-
-    <video id="e" controls width="400"></video>
-
-    <hr>
-
-    <h3>Live Chat</h3>
-
-    <div id="chat-box" style="
-        width: 400px;
-        height: 150px;
-        border: 1px solid #ccc;
-        overflow-y: auto;
-        margin: 0 auto 10px;
-        padding: 5px;
-        text-align: left;
-    "></div>
-
-    <input id="chat-input" placeholder="Type a message..." style="width: 300px;">
-    <button onclick="sendMessage()">Send</button>
-
-    <h3>Watch History</h3>
-    <table border="1" align="center">
-
-        <thead>
-            <tr>
-                <th>Movie</th>
-                <th>Genre</th>
-                <th>Duration (sec)</th>
-                <th>Date</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="history-body"></tbody>
-    </table>
-
-    <h3>Recommended for You</h3>
-    <p id="recommendation-info" style="color: #666; font-size: 14px;"></p>
-    <ul id="recommendation-list" style="list-style: none; padding: 0;"></ul>
-
+    </section>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="ui-helpers.js"></script>
     <script src="script.js"></script>
 </body>
 
